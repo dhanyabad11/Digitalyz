@@ -1,0 +1,11 @@
+WorkerID,WorkerName,Skills,AvailableSlots,MaxLoadPerPhase,WorkerGroup,QualificationLevel
+W001,Alice Johnson,"database,frontend,design","1,2,3,4,5",2,Development,Senior
+W002,Bob Smith,"backend,database,security","1,3,5",2,Development,Senior
+W003,Charlie Davis,"design,ux,frontend","2,3,4",1,Design,Mid
+W004,Diana Wilson,"backend,api,testing","1,2,4,5",2,Development,Junior
+W005,Edward Brown,"database,analytics,reporting","1,3,5",1,Analytics,Mid
+W006,Fiona Miller,"frontend,mobile,design","2,4",1,Development,Mid
+W007,George Taylor,"testing,automation,security","1,3,5",2,QA,Senior
+W008,Hannah White,"documentation,technical writing","1,2,3,4,5",3,Support,Junior
+W009,Ian Garcia,"analytics,reporting,visualization","2,4",1,Analytics,Mid
+W010,Julia Robinson,"backend,api,database","1,3,5",2,Development,Senior

@@ -1,0 +1,9 @@
+ClientID,ClientName,PriorityLevel,RequestedTaskIDs,GroupTag,AttributesJSON
+C001,Acme Corporation,5,"T001,T002,T003",Enterprise,"{""industry"":""Manufacturing"",""contactPerson"":""John Smith""}"
+C002,TechSolutions Inc,4,"T002,T004",Enterprise,"{""industry"":""Technology"",""contactPerson"":""Jane Doe""}"
+C003,Global Retail,3,"T001,T003,T005",Retail,"{""industry"":""Retail"",""contactPerson"":""Mike Johnson""}"
+C004,Local Services,2,"T003,T006",Small Business,"{""industry"":""Services"",""contactPerson"":""Sarah Williams""}"
+C005,Health Partners,5,"T002,T007",Healthcare,"{""industry"":""Healthcare"",""contactPerson"":""Robert Brown""}"
+C006,Educational Systems,3,"T004,T008",Education,"{""industry"":""Education"",""contactPerson"":""Emma Davis""}"
+C007,Financial Advisors,4,"T005,T009",Finance,"{""industry"":""Finance"",""contactPerson"":""Tom Wilson""}"
+C008,Creative Studios,2,"T006,T010",Creative,"{""industry"":""Media"",""contactPerson"":""Lisa Martinez""}"
