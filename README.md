@@ -4,31 +4,31 @@ Data Alchemist is a Next.js web application that helps users manage and configur
 
 ## Features
 
-- **Data Ingestion**: Upload CSV or XLSX files for clients, workers, and tasks
-- **Data Editing**: View and edit data in an interactive grid
-- **Validation**: Run comprehensive validations to check for errors and warnings
-- **AI-Powered Features**:
-  - Intelligent data parsing with Gemini AI
-  - Natural language search
-  - Natural language data modification
-  - AI-assisted rule creation
-  - AI rule recommendations
-  - Error correction suggestions
-  - Deep AI validation
-- **Rule Creation**: Create business rules to constrain resource allocation
-- **Prioritization**: Set weights for different allocation criteria
-- **Export**: Download cleaned data and rules in a structured format
+-   **Data Ingestion**: Upload CSV or XLSX files for clients, workers, and tasks
+-   **Data Editing**: View and edit data in an interactive grid
+-   **Validation**: Run comprehensive validations to check for errors and warnings
+-   **AI-Powered Features**:
+    -   Intelligent data parsing with Gemini AI
+    -   Natural language search
+    -   Natural language data modification
+    -   AI-assisted rule creation
+    -   AI rule recommendations
+    -   Error correction suggestions
+    -   Deep AI validation
+-   **Rule Creation**: Create business rules to constrain resource allocation
+-   **Prioritization**: Set weights for different allocation criteria
+-   **Export**: Download cleaned data and rules in a structured format
 
 ## Tech Stack
 
-- Next.js 14
-- TypeScript
-- Tailwind CSS
-- Google Gemini AI
-- React Table
-- Chart.js
-- React Dropzone
-- XLSX and PapaParse for file parsing
+-   Next.js 14
+-   TypeScript
+-   Tailwind CSS
+-   Google Gemini AI
+-   React Table
+-   Chart.js
+-   React Dropzone
+-   XLSX and PapaParse for file parsing
 
 ## AI Features Implementation
 
@@ -52,13 +52,14 @@ The application uses Google's Gemini AI for several key features:
 
 ### Prerequisites
 
-- Node.js 18 or later
-- npm or yarn
-- Google Gemini API Key
+-   Node.js 18 or later
+-   npm or yarn
+-   Google Gemini API Key
 
 ### Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/dhanyabad11/data-alchemist.git
-   cd data-alchemist
+    ```bash
+    git clone https://github.com/dhanyabad11/Digitalyz.git
+    cd data-alchemist
+    ```
