@@ -8,21 +8,21 @@ import { FiChevronUp, FiChevronDown, FiAlertCircle, FiAlertTriangle, FiX } from 
 interface Client {
     ClientID: string;
     ClientName: string;
-    // Add other client fields as needed
 }
 
 interface Worker {
     WorkerID: string;
-    // Add other worker fields as needed
 }
 
 interface Task {
     TaskID: string;
-    // Add other task fields as needed
 }
 
 // Union type for data
 type Entity = Client | Worker | Task;
+
+// Type for accessor keys
+type EntityKeys = keyof Client | keyof Worker | keyof Task;
 
 interface ValidationError {
     entityId: string;
@@ -37,11 +37,11 @@ interface DataGridProps {
     errors: ValidationError[];
     warnings: ValidationError[];
     filteredIds: string[];
-    onResetFilters?: () => void; // Optional callback for resetting filters
+    onResetFilters?: () => void;
 }
 
 // Utility to get ID field based on entity type
-const getIdField = (entityType: DataGridProps["entityType"]): keyof Entity => {
+const getIdField = (entityType: DataGridProps["entityType"]): EntityKeys => {
     switch (entityType) {
         case "client":
             return "ClientID";
@@ -98,43 +98,42 @@ export default function DataGrid({
             };
         };
 
-        const baseColumns: Column<Entity>[] = [
-            {
-                Header: `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} ID`,
-                accessor: getIdField(entityType),
-                Cell: ({ row, value, column }: CellProps<Entity, string>) => (
-                    <EditableCell
-                        value={value}
-                        row={row}
-                        column={column}
-                        updateData={(rowIndex: number, columnId: string, value: string) => {
-                            setData((prev) => {
-                                const newData = [...prev];
-                                newData[rowIndex] = { ...newData[rowIndex], [columnId]: value };
-                                return newData;
-                            });
-                        }}
-                        isEditing={
-                            editingCell?.rowIndex === row.index &&
-                            editingCell?.columnId === column.id
-                        }
-                        setIsEditing={setEditingCell}
-                    />
-                ),
-                cellProps: getColumnCellProps,
-            },
-        ];
+        // Base ID column
+        const idColumn: Column<Entity> = {
+            Header: `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} ID`,
+            accessor: getIdField(entityType) as keyof Entity, // Type assertion to satisfy TypeScript
+            Cell: ({ row, value, column }: CellProps<Entity, string>) => (
+                <EditableCell
+                    value={value}
+                    row={row}
+                    column={column}
+                    updateData={(rowIndex: number, columnId: string, value: string) => {
+                        setData((prev) => {
+                            const newData = [...prev];
+                            newData[rowIndex] = { ...newData[rowIndex], [columnId]: value };
+                            return newData;
+                        });
+                    }}
+                    isEditing={
+                        editingCell?.rowIndex === row.index && editingCell?.columnId === column.id
+                    }
+                    setIsEditing={setEditingCell}
+                />
+            ),
+            cellProps: getColumnCellProps,
+        };
 
+        // Conditional columns based on entity type
         if (entityType === "client") {
             return [
-                ...baseColumns,
+                idColumn,
                 {
                     Header: "Client Name",
-                    accessor: "ClientName",
+                    accessor: "ClientName" as keyof Client, // Specific to Client
                     Cell: ({ row, value, column }: CellProps<Client, string>) => (
                         <EditableCell
                             value={value}
-                            row={row as Row<Client>} // Cast to specific type
+                            row={row as Row<Client>} // Cast to Client
                             column={column as Column<Client>}
                             updateData={(rowIndex: number, columnId: string, value: string) => {
                                 setData((prev) => {
@@ -155,10 +154,10 @@ export default function DataGrid({
             ];
         }
 
-        return baseColumns; // Worker and Task only have ID column for now
+        return [idColumn]; // Worker and Task only have ID column
     }, [entityType, errors, warnings, editingCell, setData]);
 
-    // Use react-table hooks with strict typing
+    // Use react-table hooks
     const {
         getTableProps,
         getTableBodyProps,
@@ -310,6 +309,7 @@ export default function DataGrid({
                                     ? "bg-white text-gray-500 hover:bg-gray-50"
                                     : "cursor-not-allowed bg-gray-200 text-gray-400"
                             }`}
+                            aria-label="Previous page"
                         >
                             Previous
                         </button>
@@ -321,6 +321,7 @@ export default function DataGrid({
                                     ? "bg-white text-gray-500 hover:bg-gray-50"
                                     : "cursor-not-allowed bg-gray-200 text-gray-400"
                             }`}
+                            aria-label="Next page"
                         >
                             Next
                         </button>
@@ -408,7 +409,7 @@ export default function DataGrid({
     );
 }
 
-// EditableCell.tsx (Stub with proper typing)
+// EditableCell.tsx
 interface EditableCellProps<T extends object> {
     value: string;
     row: Row<T>;
@@ -457,7 +458,7 @@ export function EditableCell<T extends object>({
                     setIsEditing(null);
                 }
             }}
-            className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm"
+            className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
             autoFocus
         />
     );
