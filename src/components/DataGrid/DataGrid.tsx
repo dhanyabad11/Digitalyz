@@ -1,27 +1,56 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useTable, useSortBy, usePagination } from "react-table";
-import {
-    FiChevronUp,
-    FiChevronDown,
-    FiEdit2,
-    FiCheck,
-    FiX,
-    FiAlertCircle,
-    FiAlertTriangle,
-} from "react-icons/fi";
-import { ValidationError } from "@/types";
-import EditableCell from "./EditableCell";
+import { useTable, useSortBy, usePagination, Column, CellProps, Row } from "react-table";
+import { FiChevronUp, FiChevronDown, FiAlertCircle, FiAlertTriangle, FiX } from "react-icons/fi";
+
+// Define interfaces for data structures
+interface Client {
+    ClientID: string;
+    ClientName: string;
+    // Add other client fields as needed
+}
+
+interface Worker {
+    WorkerID: string;
+    // Add other worker fields as needed
+}
+
+interface Task {
+    TaskID: string;
+    // Add other task fields as needed
+}
+
+// Union type for data
+type Entity = Client | Worker | Task;
+
+interface ValidationError {
+    entityId: string;
+    field: string;
+    message: string;
+}
 
 interface DataGridProps {
-    data: any[];
-    setData: React.Dispatch<React.SetStateAction<any[]>>;
+    data: Entity[];
+    setData: React.Dispatch<React.SetStateAction<Entity[]>>;
     entityType: "client" | "worker" | "task";
     errors: ValidationError[];
     warnings: ValidationError[];
     filteredIds: string[];
+    onResetFilters?: () => void; // Optional callback for resetting filters
 }
+
+// Utility to get ID field based on entity type
+const getIdField = (entityType: DataGridProps["entityType"]): keyof Entity => {
+    switch (entityType) {
+        case "client":
+            return "ClientID";
+        case "worker":
+            return "WorkerID";
+        case "task":
+            return "TaskID";
+    }
+};
 
 export default function DataGrid({
     data,
@@ -30,27 +59,24 @@ export default function DataGrid({
     errors,
     warnings,
     filteredIds,
+    onResetFilters,
 }: DataGridProps) {
-    const [editingCell, setEditingCell] = useState<{ rowIndex: number; columnId: string } | null>(
-        null
-    );
+    const [editingCell, setEditingCell] = useState<{
+        rowIndex: number;
+        columnId: string;
+    } | null>(null);
 
-    // Filter data based on filtered IDs if provided
+    // Filter data based on filtered IDs
     const filteredData = useMemo(() => {
         if (filteredIds.length === 0) return data;
-
-        const idField =
-            entityType === "client" ? "ClientID" : entityType === "worker" ? "WorkerID" : "TaskID";
-
-        return data.filter((item) => filteredIds.includes(item[idField]));
+        const idField = getIdField(entityType);
+        return data.filter((item) => filteredIds.includes(item[idField] as string));
     }, [data, filteredIds, entityType]);
 
-    // Get columns based on entity type
-    const columns = useMemo(() => {
-        // Common column settings
-        const getColumnCellProps = (info: any) => {
-            const rowId =
-                info.row.original[`${entityType.charAt(0).toUpperCase() + entityType.slice(1)}ID`];
+    // Define columns with proper typing
+    const columns = useMemo<Column<Entity>[]>(() => {
+        const getColumnCellProps = (info: CellProps<Entity, string>) => {
+            const rowId = info.row.original[getIdField(entityType)] as string;
             const cellErrors = errors.filter(
                 (e) => e.entityId === rowId && e.field === info.column.id
             );
@@ -72,44 +98,50 @@ export default function DataGrid({
             };
         };
 
-        // Return appropriate columns based on entity type
+        const baseColumns: Column<Entity>[] = [
+            {
+                Header: `${entityType.charAt(0).toUpperCase() + entityType.slice(1)} ID`,
+                accessor: getIdField(entityType),
+                Cell: ({ row, value, column }: CellProps<Entity, string>) => (
+                    <EditableCell
+                        value={value}
+                        row={row}
+                        column={column}
+                        updateData={(rowIndex: number, columnId: string, value: string) => {
+                            setData((prev) => {
+                                const newData = [...prev];
+                                newData[rowIndex] = { ...newData[rowIndex], [columnId]: value };
+                                return newData;
+                            });
+                        }}
+                        isEditing={
+                            editingCell?.rowIndex === row.index &&
+                            editingCell?.columnId === column.id
+                        }
+                        setIsEditing={setEditingCell}
+                    />
+                ),
+                cellProps: getColumnCellProps,
+            },
+        ];
+
         if (entityType === "client") {
             return [
-                {
-                    Header: "Client ID",
-                    accessor: "ClientID",
-                    Cell: ({ row, value, column }: any) => (
-                        <EditableCell
-                            value={value}
-                            row={row}
-                            column={column}
-                            updateData={(rowIndex, columnId, value) => {
-                                const newData = [...data];
-                                newData[rowIndex].ClientID = value;
-                                setData(newData);
-                            }}
-                            isEditing={
-                                editingCell?.rowIndex === row.index &&
-                                editingCell?.columnId === column.id
-                            }
-                            setIsEditing={setEditingCell}
-                        />
-                    ),
-                    cellProps: getColumnCellProps,
-                },
-                // Other client columns would go here
+                ...baseColumns,
                 {
                     Header: "Client Name",
                     accessor: "ClientName",
-                    Cell: ({ row, value, column }: any) => (
+                    Cell: ({ row, value, column }: CellProps<Client, string>) => (
                         <EditableCell
                             value={value}
-                            row={row}
-                            column={column}
-                            updateData={(rowIndex, columnId, value) => {
-                                const newData = [...data];
-                                newData[rowIndex].ClientName = value;
-                                setData(newData);
+                            row={row as Row<Client>} // Cast to specific type
+                            column={column as Column<Client>}
+                            updateData={(rowIndex: number, columnId: string, value: string) => {
+                                setData((prev) => {
+                                    const newData = [...prev];
+                                    newData[rowIndex] = { ...newData[rowIndex], [columnId]: value };
+                                    return newData;
+                                });
                             }}
                             isEditing={
                                 editingCell?.rowIndex === row.index &&
@@ -120,75 +152,13 @@ export default function DataGrid({
                     ),
                     cellProps: getColumnCellProps,
                 },
-                // More client columns...
-            ];
-        } else if (entityType === "worker") {
-            return [
-                {
-                    Header: "Worker ID",
-                    accessor: "WorkerID",
-                    Cell: ({ row, value, column }: any) => (
-                        <EditableCell
-                            value={value}
-                            row={row}
-                            column={column}
-                            updateData={(rowIndex, columnId, value) => {
-                                const newData = [...data];
-                                newData[rowIndex].WorkerID = value;
-                                setData(newData);
-                            }}
-                            isEditing={
-                                editingCell?.rowIndex === row.index &&
-                                editingCell?.columnId === column.id
-                            }
-                            setIsEditing={setEditingCell}
-                        />
-                    ),
-                    cellProps: getColumnCellProps,
-                },
-                // Other worker columns would go here
-            ];
-        } else {
-            // task
-            return [
-                {
-                    Header: "Task ID",
-                    accessor: "TaskID",
-                    Cell: ({ row, value, column }: any) => (
-                        <EditableCell
-                            value={value}
-                            row={row}
-                            column={column}
-                            updateData={(rowIndex, columnId, value) => {
-                                const newData = [...data];
-                                newData[rowIndex].TaskID = value;
-                                setData(newData);
-                            }}
-                            isEditing={
-                                editingCell?.rowIndex === row.index &&
-                                editingCell?.columnId === column.id
-                            }
-                            setIsEditing={setEditingCell}
-                        />
-                    ),
-                    cellProps: getColumnCellProps,
-                },
-                // Other task columns would go here
             ];
         }
-    }, [entityType, data, setData, editingCell, errors, warnings]);
 
-    // Use react-table hooks
-    const tableInstance = useTable<any>(
-        {
-            columns,
-            data: filteredData,
-            initialState: { pageIndex: 0, pageSize: 10 },
-        },
-        useSortBy,
-        usePagination
-    ) as any;
+        return baseColumns; // Worker and Task only have ID column for now
+    }, [entityType, errors, warnings, editingCell, setData]);
 
+    // Use react-table hooks with strict typing
     const {
         getTableProps,
         getTableBodyProps,
@@ -204,27 +174,35 @@ export default function DataGrid({
         previousPage,
         setPageSize,
         state: { pageIndex, pageSize },
-    } = tableInstance;
+    } = useTable<Entity>(
+        {
+            columns,
+            data: filteredData,
+            initialState: { pageIndex: 0, pageSize: 10 },
+        },
+        useSortBy,
+        usePagination
+    );
 
     return (
-        <div>
+        <div className="space-y-4">
             {filteredIds.length > 0 && (
-                <div className="mb-4 p-2 bg-blue-50 rounded-md text-sm text-blue-700 flex items-center">
+                <div className="flex items-center rounded-md bg-blue-50 p-2 text-sm text-blue-700">
                     <FiAlertCircle className="mr-2 h-4 w-4" />
                     Showing {filteredData.length} filtered results
-                    <button
-                        onClick={() => {
-                            // This would be linked to the parent component's reset function
-                            // which we'll handle through the filtered IDs being empty
-                        }}
-                        className="ml-auto text-blue-600 hover:text-blue-800"
-                    >
-                        <FiX className="h-4 w-4" />
-                    </button>
+                    {onResetFilters && (
+                        <button
+                            onClick={onResetFilters}
+                            className="ml-auto text-blue-600 hover:text-blue-800"
+                            aria-label="Clear filters"
+                        >
+                            <FiX className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
             )}
 
-            <div className="overflow-x-auto border rounded-lg">
+            <div className="overflow-x-auto rounded-lg border">
                 <table {...getTableProps()} className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         {headerGroups.map((headerGroup) => (
@@ -232,7 +210,7 @@ export default function DataGrid({
                                 {headerGroup.headers.map((column) => (
                                     <th
                                         {...column.getHeaderProps(column.getSortByToggleProps())}
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                        className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                                         key={column.id}
                                     >
                                         <div className="flex items-center">
@@ -244,26 +222,21 @@ export default function DataGrid({
                                                     ) : (
                                                         <FiChevronUp className="h-4 w-4" />
                                                     )
-                                                ) : (
-                                                    ""
-                                                )}
+                                                ) : null}
                                             </span>
                                         </div>
                                     </th>
                                 ))}
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                     Actions
                                 </th>
                             </tr>
                         ))}
                     </thead>
-                    <tbody {...getTableBodyProps()} className="bg-white divide-y divide-gray-200">
-                        {page.map((row, i) => {
+                    <tbody {...getTableBodyProps()} className="divide-y divide-gray-200 bg-white">
+                        {page.map((row) => {
                             prepareRow(row);
-                            const rowId =
-                                row.original[
-                                    `${entityType.charAt(0).toUpperCase() + entityType.slice(1)}ID`
-                                ];
+                            const rowId = row.original[getIdField(entityType)] as string;
                             const rowErrors = errors.filter((e) => e.entityId === rowId);
                             const rowWarnings = warnings.filter((w) => w.entityId === rowId);
 
@@ -279,17 +252,19 @@ export default function DataGrid({
                                             : ""
                                     }
                                 >
-                                    {row.cells.map((cell) => {
-                                        return (
-                                            <td
-                                                {...cell.getCellProps(cell.column.cellProps(cell))}
-                                                key={cell.column.id}
-                                            >
-                                                {cell.render("Cell")}
-                                            </td>
-                                        );
-                                    })}
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                    {row.cells.map((cell) => (
+                                        <td
+                                            {...cell.getCellProps(
+                                                cell.column.cellProps?.(
+                                                    cell as CellProps<Entity, string>
+                                                )
+                                            )}
+                                            key={cell.column.id}
+                                        >
+                                            {cell.render("Cell")}
+                                        </td>
+                                    ))}
+                                    <td className="whitespace-nowrap px-6 py-4 text-sm">
                                         <div className="flex items-center space-x-2">
                                             {rowErrors.length > 0 && (
                                                 <FiAlertCircle
@@ -297,6 +272,7 @@ export default function DataGrid({
                                                     title={rowErrors
                                                         .map((e) => e.message)
                                                         .join("\n")}
+                                                    aria-label="Row errors"
                                                 />
                                             )}
                                             {rowWarnings.length > 0 && (
@@ -305,6 +281,7 @@ export default function DataGrid({
                                                     title={rowWarnings
                                                         .map((w) => w.message)
                                                         .join("\n")}
+                                                    aria-label="Row warnings"
                                                 />
                                             )}
                                         </div>
@@ -316,24 +293,22 @@ export default function DataGrid({
                 </table>
             </div>
 
-            {/* No results message */}
             {filteredData.length === 0 && (
-                <div className="text-center py-8">
+                <div className="py-8 text-center">
                     <p className="text-gray-500">No results found</p>
                 </div>
             )}
 
-            {/* Pagination */}
             {filteredData.length > 0 && (
-                <div className="py-3 flex items-center justify-between">
-                    <div className="flex-1 flex justify-between sm:hidden">
+                <div className="flex items-center justify-between py-3">
+                    <div className="flex flex-1 justify-between sm:hidden">
                         <button
                             onClick={() => previousPage()}
                             disabled={!canPreviousPage}
-                            className={`btn ${
-                                !canPreviousPage
-                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                    : "btn-outline"
+                            className={`rounded-md border border-gray-300 px-4 py-2 text-sm font-medium ${
+                                canPreviousPage
+                                    ? "bg-white text-gray-500 hover:bg-gray-50"
+                                    : "cursor-not-allowed bg-gray-200 text-gray-400"
                             }`}
                         >
                             Previous
@@ -341,101 +316,149 @@ export default function DataGrid({
                         <button
                             onClick={() => nextPage()}
                             disabled={!canNextPage}
-                            className={`btn ${
-                                !canNextPage
-                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                    : "btn-outline"
+                            className={`rounded-md border border-gray-300 px-4 py-2 text-sm font-medium ${
+                                canNextPage
+                                    ? "bg-white text-gray-500 hover:bg-gray-50"
+                                    : "cursor-not-allowed bg-gray-200 text-gray-400"
                             }`}
                         >
                             Next
                         </button>
                     </div>
-                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div className="flex gap-x-2 items-center">
+                    <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-x-2">
                             <span className="text-sm text-gray-700">
                                 Page <span className="font-medium">{pageIndex + 1}</span> of{" "}
                                 <span className="font-medium">{pageOptions.length}</span>
                             </span>
                             <select
                                 value={pageSize}
-                                onChange={(e) => {
-                                    setPageSize(Number(e.target.value));
-                                }}
-                                className="text-sm rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                onChange={(e) => setPageSize(Number(e.target.value))}
+                                className="rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                aria-label="Rows per page"
                             >
-                                {[5, 10, 20, 30, 40, 50].map((pageSize) => (
-                                    <option key={pageSize} value={pageSize}>
-                                        Show {pageSize}
+                                {[5, 10, 20, 30, 40, 50].map((size) => (
+                                    <option key={size} value={size}>
+                                        Show {size}
                                     </option>
                                 ))}
                             </select>
                         </div>
-                        <div>
-                            <nav
-                                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                                aria-label="Pagination"
+                        <nav
+                            className="relative z-0 inline-flex -space-x-px rounded-md shadow-sm"
+                            aria-label="Pagination"
+                        >
+                            <button
+                                onClick={() => gotoPage(0)}
+                                disabled={!canPreviousPage}
+                                className={`relative inline-flex items-center rounded-l-md border border-gray-300 px-2 py-2 text-sm font-medium ${
+                                    canPreviousPage
+                                        ? "bg-white text-gray-500 hover:bg-gray-50"
+                                        : "cursor-not-allowed bg-gray-200 text-gray-400"
+                                }`}
+                                aria-label="First page"
                             >
-                                <button
-                                    className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                                        !canPreviousPage
-                                            ? "text-gray-300 cursor-not-allowed"
-                                            : "text-gray-500 hover:bg-gray-50"
-                                    }`}
-                                    onClick={() => gotoPage(0)}
-                                    disabled={!canPreviousPage}
-                                >
-                                    <span className="sr-only">First</span>
-                                    <span className="h-5 w-5" aria-hidden="true">
-                                        «
-                                    </span>
-                                </button>
-                                <button
-                                    className={`relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                                        !canPreviousPage
-                                            ? "text-gray-300 cursor-not-allowed"
-                                            : "text-gray-500 hover:bg-gray-50"
-                                    }`}
-                                    onClick={() => previousPage()}
-                                    disabled={!canPreviousPage}
-                                >
-                                    <span className="sr-only">Previous</span>
-                                    <span className="h-5 w-5" aria-hidden="true">
-                                        ‹
-                                    </span>
-                                </button>
-                                <button
-                                    className={`relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                                        !canNextPage
-                                            ? "text-gray-300 cursor-not-allowed"
-                                            : "text-gray-500 hover:bg-gray-50"
-                                    }`}
-                                    onClick={() => nextPage()}
-                                    disabled={!canNextPage}
-                                >
-                                    <span className="sr-only">Next</span>
-                                    <span className="h-5 w-5" aria-hidden="true">
-                                        ›
-                                    </span>
-                                </button>
-                                <button
-                                    className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                                        !canNextPage
-                                            ? "text-gray-300 cursor-not-allowed"
-                                            : "text-gray-500 hover:bg-gray-50"
-                                    }`}
-                                    onClick={() => gotoPage(pageCount - 1)}
-                                    disabled={!canNextPage}
-                                >
-                                    <span className="sr-only">Last</span>
-                                    <span className="h-5 w-5" aria-hidden="true">
-                                        »
-                                    </span>
-                                </button>
-                            </nav>
-                        </div>
+                                <span className="sr-only">First</span>
+                                <span aria-hidden="true">«</span>
+                            </button>
+                            <button
+                                onClick={() => previousPage()}
+                                disabled={!canPreviousPage}
+                                className={`relative inline-flex items-center border border-gray-300 px-2 py-2 text-sm font-medium ${
+                                    canPreviousPage
+                                        ? "bg-white text-gray-500 hover:bg-gray-50"
+                                        : "cursor-not-allowed bg-gray-200 text-gray-400"
+                                }`}
+                                aria-label="Previous page"
+                            >
+                                <span className="sr-only">Previous</span>
+                                <span aria-hidden="true">‹</span>
+                            </button>
+                            <button
+                                onClick={() => nextPage()}
+                                disabled={!canNextPage}
+                                className={`relative inline-flex items-center border border-gray-300 px-2 py-2 text-sm font-medium ${
+                                    canNextPage
+                                        ? "bg-white text-gray-500 hover:bg-gray-50"
+                                        : "cursor-not-allowed bg-gray-200 text-gray-400"
+                                }`}
+                                aria-label="Next page"
+                            >
+                                <span className="sr-only">Next</span>
+                                <span aria-hidden="true">›</span>
+                            </button>
+                            <button
+                                onClick={() => gotoPage(pageCount - 1)}
+                                disabled={!canNextPage}
+                                className={`relative inline-flex items-center rounded-r-md border border-gray-300 px-2 py-2 text-sm font-medium ${
+                                    canNextPage
+                                        ? "bg-white text-gray-500 hover:bg-gray-50"
+                                        : "cursor-not-allowed bg-gray-200 text-gray-400"
+                                }`}
+                                aria-label="Last page"
+                            >
+                                <span className="sr-only">Last</span>
+                                <span aria-hidden="true">»</span>
+                            </button>
+                        </nav>
                     </div>
                 </div>
             )}
         </div>
+    );
+}
+
+// EditableCell.tsx (Stub with proper typing)
+interface EditableCellProps<T extends object> {
+    value: string;
+    row: Row<T>;
+    column: Column<T>;
+    updateData: (rowIndex: number, columnId: string, value: string) => void;
+    isEditing: boolean;
+    setIsEditing: React.Dispatch<
+        React.SetStateAction<{ rowIndex: number; columnId: string } | null>
+    >;
+}
+
+export function EditableCell<T extends object>({
+    value,
+    row,
+    column,
+    updateData,
+    isEditing,
+    setIsEditing,
+}: EditableCellProps<T>) {
+    const [inputValue, setInputValue] = useState(value);
+
+    if (!isEditing) {
+        return (
+            <div
+                onClick={() => setIsEditing({ rowIndex: row.index, columnId: column.id })}
+                className="cursor-pointer"
+            >
+                {value}
+            </div>
+        );
+    }
+
+    return (
+        <input
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onBlur={() => {
+                updateData(row.index, column.id, inputValue);
+                setIsEditing(null);
+            }}
+            onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                    updateData(row.index, column.id, inputValue);
+                    setIsEditing(null);
+                } else if (e.key === "Escape") {
+                    setIsEditing(null);
+                }
+            }}
+            className="w-full border border-gray-300 rounded-md px-2 py-1 text-sm"
+            autoFocus
+        />
     );
 }
